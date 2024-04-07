@@ -1,0 +1,58 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres
+    restart: always
+    env_file:
+      - .env
+    command: -p 5433
+    expose:
+      - 5433
+    volumes:
+      - ./database-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis
+    restart: always
+    command: --port 6379
+    expose:
+      - 6379
+    env_file:
+      - .env
+
+  app:
+    build:
+      context: .
+    env_file:
+      - .env
+    container_name: photo_bank
+    command: [ "/photo-bank-backend/docker/app.sh" ]
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+  celery:
+    build:
+      context: .
+    env_file:
+      - .env
+    container_name: celery_app
+    command: [ "/photo-bank-backend/docker/celery.sh", "celery" ]
+    depends_on:
+      - redis
+
+  flower:
+    build:
+      context: .
+    env_file:
+      - .env
+    container_name: flower_app
+    command: [ "/photo-bank-backend/docker/celery.sh", "flower" ]
+    depends_on:
+      - redis
+      - celery
+    ports:
+      - 8888:5555
